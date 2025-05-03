@@ -1,0 +1,21 @@
+#!/bin/sh
+
+FC_URL=$(cat ./FC_SUBSCRIPTION_URL)
+LISTEN_PORT=10808
+SAMPLES_DIR=samples
+OUT_DIR=configs
+
+mkdir -p $OUT_DIR/blacklist $OUT_DIR/global $OUT_DIR/whitelist
+echo "FC subscription url:" $FC_URL
+
+for line in $(fetch $FC_URL -o - | base64 -d | grep '^trojan://' | sed -e 's/\r//' -e 's/trojan:\/\///' -e 's/@/,/' -e 's/:/,/' -e 's/?allowInsecure=1#/,/')
+do
+	password=$(echo $line | cut -f 1 -d ",")
+	url=$(echo $line | cut -f 2 -d ",")
+	server_port=$(echo $line | cut -f 3 -d ",")
+	title=$(echo $line | cut -f 4 -d ",")
+	for routing in "blacklist" "global" "whitelist"
+	do
+		sed -e "s/<URL>/$url/" -e "s/<LISTEN_PORT>/$LISTEN_PORT/" -e "s/<PASSWORD>/$password/" -e "s/<SERVER_PORT>/$server_port/" $SAMPLES_DIR/$routing.json.sample > $OUT_DIR/$routing/$title.json
+	done
+done
